@@ -1,0 +1,7 @@
+os module
+os.type();
+os.platform();
+os.uptime();
+os.arch();
+os.version();
+os.release();
