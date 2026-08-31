@@ -8,11 +8,13 @@ const server = http.createServer((req,res) => {
   res.write('<body>');
   res.write('<header>');
   res.write('<nav>');
-  res.write('<a href="/">home</a>');
-  res.write('<a href="/men">men</a>');
-  res.write('<a href="/women">women</a>');
-  res.write('<a href="/kids">kids</a>');
-  res.write('<a href="/cart">cart</a>');
+  res.write('<ul>');
+  res.write('<li><a href="/">home</a></li>');
+  res.write('<li><a href="/men">men</a></li>');
+  res.write('<li><a href="/women">women</a></li>');
+  res.write('<li><a href="/kids">kids</a></li>');
+  res.write('<li><a href="/cart">cart</a></li>');
+  res.write('</ul>');
   res.write('</nav>');
   res.write('</header>');
   if(req.url === '/'){
