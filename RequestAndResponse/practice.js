@@ -27,6 +27,8 @@ const server = http.createServer((req,res) => {
     res.write('<h1>Welcome to the Kids page</h1>');
   }else if(req.url === '/cart'){
     res.write('<h1>Welcome to the cart page</h1>');
+  }else{
+    res.write('<h1>Invalid page</h1>');
   }
   res.write('</body>');
   res.write('</html>');
