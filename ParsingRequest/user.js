@@ -1,6 +1,5 @@
-const http = require('http');
 const fs = require('fs');
-const server = http.createServer((req,res) =>{
+const userRequestHandler = (req,res) =>{
   console.log(req.url, req.method);
   if(req.url === '/'){
   res.setHeader('Content-Type', 'text/html');
@@ -40,15 +39,15 @@ const server = http.createServer((req,res) =>{
     res.setHeader('Location','/');
     return res.end();
   }
+
+  
   res.setHeader('Content-Type', 'text/html');
   res.write('<html>');
   res.write('<head><title>Page heading</title><head>');
   res.write('<body><h1>page content</h1></body>');
   res.write('</html>');
   return res.end();
-});
+};
 
-const PORT = 3001;
-server.listen(PORT,() =>{
-  console.log(`Server is Running at Address http://localhost:${PORT}`);
-});
+module.exports = userRequestHandler;
+
