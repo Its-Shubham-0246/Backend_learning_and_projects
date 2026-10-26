@@ -14,8 +14,9 @@ mongoose.connect(process.env.MONGO_DB_URL)
   console.log("Database can't connected",error);
 })
 
-app.use('/students',studentRoutes)
+app.use('/students',studentRoutes);
 
 app.listen(PORT,() =>{
-  console.log(`Server is Running at Address http://localhost:${PORT}`)
-})
+  console.log(`Server is Running at Address http://localhost:${PORT}`);
+});
+

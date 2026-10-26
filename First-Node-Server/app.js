@@ -8,4 +8,3 @@ const PORT = 3001;
 server.listen(PORT,() =>{
   console.log(`Server is Running at Address http://localhost:${PORT}`);
 });
-
