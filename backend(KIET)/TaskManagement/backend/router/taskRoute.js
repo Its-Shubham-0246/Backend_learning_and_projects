@@ -1,11 +1,8 @@
 const express = require('express')
 const router = express.Router()
-
 const Tasks = require('../model/taskSchema')
 
-
 router.get('/api/task', async (req, res) => {
-
   // const page  = parseint(req.query.page,10)||1
   const limit = parseInt(req.query.limit,10)||10
   // const sanitizePage  = page>1?page:1
@@ -36,7 +33,7 @@ router.get('/api/task', async (req, res) => {
       })
     }
   }
-  query._id = {$lt:}
+  // query._id = {$lt:}
   const task = Tasks.find(query).sort({_id:-1}).limit(sanitizeLimit+1)
   const hasNext = task.length>sanitizeLimit
 
