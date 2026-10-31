@@ -2,6 +2,7 @@ const express = require('express')
 require('dotenv').config()
 const mongoose = require('mongoose')
 const taskroute = require('./router/taskRoute')
+const errorHandler = require('./middleware/errorHandler')
 const ratelimit = require('express-rate-limit')
 const app = express()
 const limit = ratelimit({
@@ -30,8 +31,9 @@ app.use((req, res, next) => {
 })
 
 app.use(express.json())
-app.use(rateLimitMiddleware)
+app.use(limit)
 app.use('/', taskroute)
+app.use(errorHandler)
 
 app.listen(5050, () => {
   console.log('server listening')
