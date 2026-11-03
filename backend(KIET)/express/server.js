@@ -6,6 +6,13 @@ const mongoose = require('mongoose')
 const app = express()
 app.use(express.json()) //middleware
 const PORT = process.env.PORT||3030
+app.get('/health', (req, res) => {
+  const isDatabaseConnected = mongoose.connection.readyState === 1
+  res.status(isDatabaseConnected ? 200 : 503).json({
+    status: isDatabaseConnected ? 'ok' : 'unavailable',
+    database: isDatabaseConnected ? 'connected' : 'disconnected',
+  })
+})
 mongoose.connect(process.env.MONGO_DB_URL)
 .then(()=>{
   console.log("Database Connected");

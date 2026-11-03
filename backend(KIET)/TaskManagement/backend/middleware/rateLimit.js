@@ -24,8 +24,7 @@ function rateLimit(req, res, next) {
       resetAt: now + WINDOW_MS,
     }
     requestsByIp.set(ip, requestWindow)
-  }
-
+  }  
   requestWindow.count += 1
   const remaining = Math.max(REQUEST_LIMIT - requestWindow.count, 0)
   const resetInSeconds = Math.ceil((requestWindow.resetAt - now) / 1000)
