@@ -1,65 +1,209 @@
-import { useEffect,useState } from "react";
+import { useEffect, useState } from 'react'
+import './App.css'
 
-const API="http://localhost:3000/api/task"
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5050'
+const API = `${API_BASE.replace(/\/$/, '')}/api/task`
 
-function App(){
-  const [tasks,setTasks]=useState([]);
-  const [title,setTitle]=useState('')
+async function readResponse(response) {
+  const data = await response.json()
 
-  const getTasks= async()=>{
-      const res= await fetch(API)
-      if(!res.ok) return
-      const data=await res.json()
-      setTasks(data)
+  if (!response.ok) {
+    throw new Error(data.message || `Request failed (${response.status})`)
   }
 
-  useEffect(()=>{
-    getTasks();
-  },[])
+  return data
+}
 
-  const addTasks=async(e)=>{
-  e.preventDefault()
-  if(!title.trim()) return;
+async function fetchTasks() {
+  const response = await fetch(API)
+  return readResponse(response)
+}
 
-  const res =await fetch(API,{method:"POST",headers:{"Content-type":"application/json"},
-  body:JSON.stringify({title})})
+function getErrorMessage(error) {
+  return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+}
 
-  setTitle('')
-  getTasks();
+function App() {
+  const [tasks, setTasks] = useState([])
+  const [title, setTitle] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isMutating, setIsMutating] = useState(false)
+  const [error, setError] = useState('')
+
+  const loadTasks = async () => {
+    try {
+      setTasks(await fetchTasks())
+      setError('')
+    } catch (requestError) {
+      setError(getErrorMessage(requestError))
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const delTasks =async(id)=>{
-  const res= await fetch(`${API}/${id}`,{method:'DELETE'});
-  getTasks();
-};
+  useEffect(() => {
+    let isCurrent = true
 
-  return(
-    <div>
-      <h1>Task Management</h1>
-       <form onSubmit={addTasks}>
-        <input
-          type="text"
-          placeholder="Enter task"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <button type="submit">Add Task</button>
-      </form>
+    fetchTasks()
+      .then((data) => {
+        if (isCurrent) {
+          setTasks(data)
+          setError('')
+        }
+      })
+      .catch((requestError) => {
+        if (isCurrent) setError(getErrorMessage(requestError))
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoading(false)
+      })
 
-      <h2>My Tasks ({tasks.length})</h2>
+    return () => {
+      isCurrent = false
+    }
+  }, [])
 
-      <ul>
-        {tasks.map((task) => (
-          <li key={task.id}>
-            <span>{task.title}</span>
-            <button onClick={() => delTasks(task.id)}>
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+  const addTask = async (event) => {
+    event.preventDefault()
+    const trimmedTitle = title.trim()
+
+    if (!trimmedTitle || isMutating) return
+
+    setError('')
+    setIsMutating(true)
+
+    try {
+      const response = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmedTitle }),
+      })
+
+      await readResponse(response)
+      setTitle('')
+      await loadTasks()
+    } catch (requestError) {
+      setError(getErrorMessage(requestError))
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
+  const toggleTask = async (task) => {
+    if (isMutating) return
+
+    setError('')
+    setIsMutating(true)
+
+    try {
+      const response = await fetch(`${API}/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !task.completed }),
+      })
+      const updatedTask = await readResponse(response)
+
+      setTasks((currentTasks) => currentTasks.map((currentTask) => (
+        currentTask.id === updatedTask.id ? updatedTask : currentTask
+      )))
+    } catch (requestError) {
+      setError(getErrorMessage(requestError))
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
+  const deleteTask = async (id) => {
+    if (isMutating) return
+
+    setError('')
+    setIsMutating(true)
+
+    try {
+      const response = await fetch(`${API}/${id}`, { method: 'DELETE' })
+      await readResponse(response)
+      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== id))
+    } catch (requestError) {
+      setError(getErrorMessage(requestError))
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
+  const completedCount = tasks.filter((task) => task.completed).length
+
+  return (
+    <main className="app-shell">
+      <section className="task-card" aria-labelledby="page-title">
+        <header className="task-header">
+          <div>
+            <p className="eyebrow">Stay on top of your day</p>
+            <h1 id="page-title">Task Management</h1>
+          </div>
+          <span className="task-count" aria-live="polite">
+            {completedCount} of {tasks.length} complete
+          </span>
+        </header>
+
+        <form className="task-form" onSubmit={addTask}>
+          <input
+            type="text"
+            placeholder="What needs to get done?"
+            aria-label="New task title"
+            maxLength={120}
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+          <button type="submit" disabled={!title.trim() || isMutating}>
+            Add Task
+          </button>
+        </form>
+
+        {error && <p className="error-banner" role="alert">{error}</p>}
+
+        <h2 className="list-heading">My Tasks</h2>
+
+        {isLoading ? (
+          <p className="status-text" role="status">Loading tasks...</p>
+        ) : tasks.length === 0 ? (
+          <div className="empty-state">
+            <p>No tasks yet</p>
+            <span>Add a task above to get started.</span>
+          </div>
+        ) : (
+          <ul className="task-list">
+            {tasks.map((task) => (
+              <li
+                className={`task-item${task.completed ? ' is-completed' : ''}`}
+                key={task.id}
+              >
+                <label className="task-details">
+                  <input
+                    className="completion-checkbox"
+                    type="checkbox"
+                    checked={task.completed}
+                    disabled={isMutating}
+                    onChange={() => toggleTask(task)}
+                    aria-label={`${task.completed ? 'Mark incomplete' : 'Mark complete'}: ${task.title}`}
+                  />
+                  <span>{task.title}</span>
+                </label>
+                <button
+                  className="delete-button"
+                  type="button"
+                  disabled={isMutating}
+                  onClick={() => deleteTask(task.id)}
+                  aria-label={`Delete ${task.title}`}
+                >
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
   )
 }
 
-export default App;
+export default App

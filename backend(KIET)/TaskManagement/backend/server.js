@@ -15,7 +15,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
   if (req.method === 'OPTIONS') {
@@ -30,6 +30,16 @@ app.use(rateLimit)
 app.use('/', taskroute)
 app.use(errorHandler)
 
-app.listen(5050, () => {
-  console.log('server listening')
-})
+const port = process.env.PORT || 5050
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('Database connected successfully')
+    app.listen(port, () => {
+      console.log(`Server listening on port ${port}`)
+    })
+  })
+  .catch((error) => {
+    console.error('Database connection failed:', error)
+    process.exitCode = 1
+  })

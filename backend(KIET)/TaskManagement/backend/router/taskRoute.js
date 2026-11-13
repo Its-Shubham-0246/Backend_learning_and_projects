@@ -1,88 +1,70 @@
 const express = require('express')
-const router = express.Router()
+const mongoose = require('mongoose')
 const Tasks = require('../model/taskSchema')
 
-router.get('/api/task', async (req, res) => {
-  // const page  = parseint(req.query.page,10)||1
-  const limit = parseInt(req.query.limit,10)||10
-  // const sanitizePage  = page>1?page:1
-  const sanitizeLimit = limit < 1?10:limit
-  // const skip = (sanitizePage - 1) * sanitizeLimit
-  // const {task,totalTask} = await Promise.all([
-  //   Tasks.find().populate("User","name","email").sort({createdAt:-1}).skip(skip).limit(sanitizeLimit),
-  //   Tasks.countDocument()
-  // ])
-  // const totalPages = Math.ceil(totalTask/sanitizeLimit)
-  // 
-  // res.status(200).json({
-  //   metadata:{
-  //   totalTask,
-  //   totalPages,
-  //   currentPage:sanitizePage,
-  //   hasPrevious:sanitizePage>1,
-  //   hasNext:sanitizePage<totalPages
-  // }
-  // })
-  const {nextCursor} = req.query;
-  const query = {};
-  if(nextCursor){
-    if(!mongoose.isValidObjectId){
-      return res.status(400).json({
-        success:false,
-        message:"Not valid Id"
-      })
-    }
-  }
-  // query._id = {$lt:}
-  const task = Tasks.find(query).sort({_id:-1}).limit(sanitizeLimit+1)
-  const hasNext = task.length>sanitizeLimit
+const router = express.Router()
 
-  if(hasNext){
-    task.pop();
-  }
-  const  lastItem = task[task.length - 1];
-  const newCursor = hashNext&&lastItem?lastItem.id:null;
-  res.status(200).json({
-    success:true,
-    metadata:{
-      limit:sanitizeLimit,
-      nextCursor:newCursor,
-    },
-    data:task
-  })
-
+const toApiTask = (task) => ({
+  id: task._id.toString(),
+  title: task.title,
+  completed: task.completed,
+  createdAt: task.createdAt,
 })
 
-router.post('/api/task', (req, res) => {
-  const { title } = req.body
+router.get('/api/task', async (req, res) => {
+  const tasks = await Tasks.find().sort({ createdAt: -1 }).lean()
+  return res.status(200).json(tasks.map(toApiTask))
+})
 
-  if (!title || !title.trim()) {
+router.post('/api/task', async (req, res) => {
+  const title = req.body?.title
+
+  if (typeof title !== 'string' || !title.trim()) {
     return res.status(400).json({ message: 'Title is missing' })
   }
 
-  const newtask = {
-    id: taskid++,
-    title: title.trim(),
-  }
-
-  tasks.push(newtask)
-  return res.status(200).json(newtask)
+  const task = await Tasks.create({ title: title.trim() })
+  return res.status(201).json(toApiTask(task))
 })
 
-router.delete('/api/task/:id', (req, res) => {
-  const id = Number(req.params.id)
+router.patch('/api/task/:id', async (req, res) => {
+  const { id } = req.params
+  const { completed } = req.body ?? {}
 
-  if (!id) {
+  if (!mongoose.isValidObjectId(id)) {
     return res.status(400).json({ message: 'Invalid task ID' })
   }
 
-  const index = tasks.findIndex((task) => task.id === id)
+  if (typeof completed !== 'boolean') {
+    return res.status(400).json({ message: 'Completed must be a boolean' })
+  }
 
-  if (index === -1) {
+  const task = await Tasks.findByIdAndUpdate(
+    id,
+    { completed },
+    { new: true, runValidators: true },
+  )
+
+  if (!task) {
     return res.status(404).json({ message: 'Task not found' })
   }
 
-  tasks.splice(index, 1)
+  return res.status(200).json(toApiTask(task))
+})
+
+router.delete('/api/task/:id', async (req, res) => {
+  const { id } = req.params
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ message: 'Invalid task ID' })
+  }
+
+  const task = await Tasks.findByIdAndDelete(id)
+
+  if (!task) {
+    return res.status(404).json({ message: 'Task not found' })
+  }
+
   return res.status(200).json({ message: 'Task deleted successfully' })
 })
 
